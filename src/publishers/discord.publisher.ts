@@ -11,4 +11,18 @@ export class DiscordPublisher
 			message as unknown as Record<string, unknown>,
 		);
 	}
+
+	async sendInteractionResponse(
+		interactionId: string,
+		interactionToken: string,
+		content: string,
+		ephemeral = true,
+	): Promise<void> {
+		await this.publish("interaction.response", {
+			interaction_id: interactionId,
+			interaction_token: interactionToken,
+			content,
+			ephemeral,
+		});
+	}
 }

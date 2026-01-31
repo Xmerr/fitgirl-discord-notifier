@@ -78,4 +78,70 @@ describe("DiscordPublisher", () => {
 			expect(parsed.embed.title).toBe("Test Title");
 		});
 	});
+
+	describe("sendInteractionResponse", () => {
+		it("should publish to interaction.response routing key", async () => {
+			// Arrange
+			const interactionId = "int-123";
+			const interactionToken = "token-abc";
+			const content = "Response message";
+
+			// Act
+			await publisher.sendInteractionResponse(
+				interactionId,
+				interactionToken,
+				content,
+			);
+
+			// Assert
+			expect(mockChannel.publish).toHaveBeenCalled();
+			const publishCall = mockChannel.publish.mock.calls[0];
+			expect(publishCall?.[0]).toBe("discord");
+			expect(publishCall?.[1]).toBe("interaction.response");
+		});
+
+		it("should serialize interaction response correctly", async () => {
+			// Arrange
+			const interactionId = "int-123";
+			const interactionToken = "token-abc";
+			const content = "Test response";
+
+			// Act
+			await publisher.sendInteractionResponse(
+				interactionId,
+				interactionToken,
+				content,
+				true,
+			);
+
+			// Assert
+			const publishCall = mockChannel.publish.mock.calls[0];
+			const buffer = publishCall?.[2] as Buffer;
+			const parsed = JSON.parse(buffer.toString());
+			expect(parsed.interaction_id).toBe("int-123");
+			expect(parsed.interaction_token).toBe("token-abc");
+			expect(parsed.content).toBe("Test response");
+			expect(parsed.ephemeral).toBe(true);
+		});
+
+		it("should default ephemeral to true", async () => {
+			// Arrange
+			const interactionId = "int-123";
+			const interactionToken = "token-abc";
+			const content = "Test response";
+
+			// Act
+			await publisher.sendInteractionResponse(
+				interactionId,
+				interactionToken,
+				content,
+			);
+
+			// Assert
+			const publishCall = mockChannel.publish.mock.calls[0];
+			const buffer = publishCall?.[2] as Buffer;
+			const parsed = JSON.parse(buffer.toString());
+			expect(parsed.ephemeral).toBe(true);
+		});
+	});
 });

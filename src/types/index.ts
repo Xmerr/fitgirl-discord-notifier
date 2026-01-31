@@ -69,6 +69,18 @@ export interface ButtonInteractionMessage {
 	interaction_token: string;
 }
 
+export interface ModalInteractionMessage {
+	custom_id: string;
+	user_id: string;
+	user_name: string;
+	channel_id: string;
+	guild_id?: string;
+	correlation_id?: string;
+	interaction_id: string;
+	interaction_token: string;
+	inputs: Record<string, string>;
+}
+
 // qBittorrent Messages
 export interface DownloadProgressMessage {
 	hash: string;
@@ -187,6 +199,10 @@ export interface IDownloadCompleteService {
 	handleComplete(message: DownloadCompleteMessage): Promise<void>;
 }
 
+export interface IModalInteractionService {
+	handleModalSubmission(message: ModalInteractionMessage): Promise<void>;
+}
+
 // Repository Interfaces
 export interface IGamesRepository {
 	create(release: FitGirlRelease, channelId: string): Promise<GameRecord>;
@@ -221,6 +237,12 @@ export interface ICorrectionsRepository {
 // Publisher Interfaces
 export interface IDiscordPublisher extends IPublisher {
 	sendPost(message: DiscordPostMessage): Promise<void>;
+	sendInteractionResponse(
+		interactionId: string,
+		interactionToken: string,
+		content: string,
+		ephemeral?: boolean,
+	): Promise<void>;
 }
 
 export interface IQbittorrentPublisher extends IPublisher {
@@ -276,6 +298,10 @@ export interface DownloadCompleteConsumerOptions extends BaseConsumerOptions {
 	downloadCompleteService: IDownloadCompleteService;
 }
 
+export interface ModalInteractionConsumerOptions extends BaseConsumerOptions {
+	modalInteractionService: IModalInteractionService;
+}
+
 export interface ReleaseNewServiceOptions {
 	gamesRepository: IGamesRepository;
 	discordPublisher: IDiscordPublisher;
@@ -307,6 +333,13 @@ export interface DownloadCompleteServiceOptions {
 	ratingsRepository: IRatingsRepository;
 	discordPublisher: IDiscordPublisher;
 	formatter: IDiscordEmbedFormatter;
+	logger: ILogger;
+}
+
+export interface ModalInteractionServiceOptions {
+	gamesRepository: IGamesRepository;
+	correctionsRepository: ICorrectionsRepository;
+	discordPublisher: IDiscordPublisher;
 	logger: ILogger;
 }
 
