@@ -1,0 +1,25 @@
+{
+	"name": "fitgirl-discord-notifier",
+	"version": "1.0.0",
+	"type": "module",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"lint": "biome check src/",
+		"lint:fix": "biome check --write src/",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test",
+		"test:coverage": "bun test --coverage",
+		"start": "bun run src/index.ts"
+	},
+	"dependencies": {
+		"@xmer/consumer-shared": "^1.0.1",
+		"ioredis": "^5.4.2"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/amqplib": "^0.10.8",
+		"@types/bun": "^1.2.4",
+		"typescript": "^5.7.3"
+	}
+}

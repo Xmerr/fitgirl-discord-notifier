@@ -1,0 +1,24 @@
+services:
+  fitgirl-discord-notifier:
+    image: xmer/fitgirl-discord-notifier:latest
+    container_name: fitgirl-discord-notifier
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - REDIS_URL=${REDIS_URL}
+      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
+      - DATABASE_PATH=/app/data/fitgirl.db
+      - PROGRESS_THROTTLE_MS=${PROGRESS_THROTTLE_MS:-30000}
+      - LOKI_HOST=${LOKI_HOST:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - fitgirl-data:/app/data
+    networks:
+      - microservices
+
+volumes:
+  fitgirl-data:
+
+networks:
+  microservices:
+    external: true
