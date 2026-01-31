@@ -8,6 +8,7 @@ import { Config } from "./config/config.js";
 import { ButtonInteractionConsumer } from "./consumers/button-interaction.consumer.js";
 import { DownloadCompleteConsumer } from "./consumers/download-complete.consumer.js";
 import { DownloadProgressConsumer } from "./consumers/download-progress.consumer.js";
+import { ModalInteractionConsumer } from "./consumers/modal-interaction.consumer.js";
 import { ReleaseNewConsumer } from "./consumers/release-new.consumer.js";
 import { DatabaseManager } from "./database/database.js";
 import { DiscordEmbedFormatter } from "./formatters/discord-embed.formatter.js";
@@ -19,6 +20,7 @@ import { RatingsRepository } from "./repositories/ratings.repository.js";
 import { ButtonInteractionService } from "./services/button-interaction.service.js";
 import { DownloadCompleteService } from "./services/download-complete.service.js";
 import { DownloadProgressService } from "./services/download-progress.service.js";
+import { ModalInteractionService } from "./services/modal-interaction.service.js";
 import { ReleaseNewService } from "./services/release-new.service.js";
 import { ProgressThrottler } from "./state/progress-throttler.js";
 
@@ -70,7 +72,7 @@ async function main(): Promise<void> {
 	const db = databaseManager.getDb();
 	const gamesRepository = new GamesRepository({ db, logger });
 	const ratingsRepository = new RatingsRepository({ db, logger });
-	const _correctionsRepository = new CorrectionsRepository({ db, logger });
+	const correctionsRepository = new CorrectionsRepository({ db, logger });
 
 	// Initialize formatter
 	const formatter = new DiscordEmbedFormatter({
@@ -108,6 +110,13 @@ async function main(): Promise<void> {
 		logger,
 	});
 
+	const modalInteractionService = new ModalInteractionService({
+		gamesRepository,
+		correctionsRepository,
+		discordPublisher,
+		logger,
+	});
+
 	const downloadProgressService = new DownloadProgressService({
 		gamesRepository,
 		ratingsRepository,
@@ -138,6 +147,14 @@ async function main(): Promise<void> {
 		channel,
 		exchange: "discord",
 		queue: "discord.interaction.button.fitgirl",
+		serviceName: "fitgirl-discord-notifier",
+		logger,
+	});
+
+	const modalInteractionDlqHandler = new DlqHandler({
+		channel,
+		exchange: "discord",
+		queue: "discord.interaction.modal.fitgirl",
 		serviceName: "fitgirl-discord-notifier",
 		logger,
 	});
@@ -179,6 +196,16 @@ async function main(): Promise<void> {
 		buttonInteractionService,
 	});
 
+	const modalInteractionConsumer = new ModalInteractionConsumer({
+		channel,
+		exchange: "discord",
+		queue: "discord.interaction.modal.fitgirl",
+		routingKey: "interaction.modal",
+		dlqHandler: modalInteractionDlqHandler,
+		logger,
+		modalInteractionService,
+	});
+
 	const downloadProgressConsumer = new DownloadProgressConsumer({
 		channel,
 		exchange: "qbittorrent",
@@ -202,6 +229,7 @@ async function main(): Promise<void> {
 	// Start consumers
 	await releaseNewConsumer.start();
 	await buttonInteractionConsumer.start();
+	await modalInteractionConsumer.start();
 	await downloadProgressConsumer.start();
 	await downloadCompleteConsumer.start();
 
@@ -213,6 +241,7 @@ async function main(): Promise<void> {
 
 		await releaseNewConsumer.stop();
 		await buttonInteractionConsumer.stop();
+		await modalInteractionConsumer.stop();
 		await downloadProgressConsumer.stop();
 		await downloadCompleteConsumer.stop();
 
