@@ -91,7 +91,7 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 			};
 		}
 
-		const components = this.buildProgressComponents(game, true, ratings);
+		const components = this.buildProgressComponents(game, true);
 
 		return {
 			id: game.guid,
@@ -135,7 +135,7 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 			};
 		}
 
-		const components = this.buildProgressComponents(game, false, ratings);
+		const components = this.buildProgressComponents(game, false);
 
 		return {
 			id: game.guid,
@@ -179,7 +179,7 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 			};
 		}
 
-		const components = this.buildProgressComponents(game, true, ratings);
+		const components = this.buildProgressComponents(game, true);
 
 		return {
 			id: game.guid,
@@ -241,9 +241,17 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 			}
 		}
 
+		// Build description with links
+		const links: string[] = [];
+		if (release.steam?.steam_url) {
+			links.push(`[Steam](${release.steam.steam_url})`);
+		}
+		links.push(`[FitGirl](${release.fitgirl_url})`);
+
 		const embed: DiscordEmbed = {
 			title: release.game_name,
 			url: release.fitgirl_url,
+			description: links.join(" | "),
 			color: COLORS.NEW_RELEASE,
 			fields,
 			timestamp: release.pub_date,
@@ -254,6 +262,12 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 
 		if (release.steam?.media.header_image) {
 			embed.thumbnail = { url: release.steam.media.header_image };
+		}
+
+		// Use first screenshot as main image if available
+		const firstScreenshot = release.steam?.media.screenshots?.[0];
+		if (firstScreenshot) {
+			embed.image = { url: firstScreenshot };
 		}
 
 		return embed;
@@ -275,34 +289,16 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 			{
 				type: 2,
 				style: BUTTON_STYLES.SUCCESS,
-				label: "0",
 				custom_id: `fitgirl_upvote_${release.guid}`,
 				emoji: { name: "👍" },
 			},
 			{
 				type: 2,
 				style: BUTTON_STYLES.DANGER,
-				label: "0",
 				custom_id: `fitgirl_downvote_${release.guid}`,
 				emoji: { name: "👎" },
 			},
 		);
-
-		if (release.steam?.steam_url) {
-			buttons.push({
-				type: 2,
-				style: BUTTON_STYLES.LINK,
-				label: "Steam",
-				url: release.steam.steam_url,
-			});
-		}
-
-		buttons.push({
-			type: 2,
-			style: BUTTON_STYLES.LINK,
-			label: "FitGirl",
-			url: release.fitgirl_url,
-		});
 
 		return [{ type: 1, components: buttons }];
 	}
@@ -310,7 +306,6 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 	private buildProgressComponents(
 		game: GameRecord,
 		downloading: boolean,
-		ratings: { upvotes: number; downvotes: number },
 	): DiscordComponent[] {
 		const buttons: DiscordComponent[] = [];
 
@@ -325,34 +320,16 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 			{
 				type: 2,
 				style: BUTTON_STYLES.SUCCESS,
-				label: String(ratings.upvotes),
 				custom_id: `fitgirl_upvote_${game.guid}`,
 				emoji: { name: "👍" },
 			},
 			{
 				type: 2,
 				style: BUTTON_STYLES.DANGER,
-				label: String(ratings.downvotes),
 				custom_id: `fitgirl_downvote_${game.guid}`,
 				emoji: { name: "👎" },
 			},
 		);
-
-		if (game.steam_url) {
-			buttons.push({
-				type: 2,
-				style: BUTTON_STYLES.LINK,
-				label: "Steam",
-				url: game.steam_url,
-			});
-		}
-
-		buttons.push({
-			type: 2,
-			style: BUTTON_STYLES.LINK,
-			label: "FitGirl",
-			url: game.fitgirl_url,
-		});
 
 		return [{ type: 1, components: buttons }];
 	}

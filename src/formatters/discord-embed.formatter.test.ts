@@ -167,7 +167,7 @@ describe("DiscordEmbedFormatter", () => {
 			expect(downloadBtn?.custom_id).toBe("fitgirl_download_test-guid-123");
 		});
 
-		it("should include rating buttons", () => {
+		it("should include rating buttons without count labels", () => {
 			// Arrange
 			const release = createMockRelease();
 
@@ -183,10 +183,14 @@ describe("DiscordEmbedFormatter", () => {
 				(b) => b.custom_id === "fitgirl_downvote_test-guid-123",
 			);
 			expect(upvoteBtn).toBeDefined();
+			expect(upvoteBtn?.label).toBeUndefined();
+			expect(upvoteBtn?.emoji?.name).toBe("👍");
 			expect(downvoteBtn).toBeDefined();
+			expect(downvoteBtn?.label).toBeUndefined();
+			expect(downvoteBtn?.emoji?.name).toBe("👎");
 		});
 
-		it("should include Steam link when steam data present", () => {
+		it("should include Steam link in description when steam data present", () => {
 			// Arrange
 			const release = createMockRelease();
 
@@ -194,9 +198,39 @@ describe("DiscordEmbedFormatter", () => {
 			const result = formatter.formatRelease(release);
 
 			// Assert
-			const buttons = result.components?.[0]?.components ?? [];
-			const steamBtn = buttons.find((b) => b.label === "Steam");
-			expect(steamBtn?.url).toBe("https://store.steampowered.com/app/12345");
+			expect(result.embed?.description).toContain(
+				"[Steam](https://store.steampowered.com/app/12345)",
+			);
+			expect(result.embed?.description).toContain("[FitGirl](");
+		});
+
+		it("should include screenshot as main image when available", () => {
+			// Arrange
+			const release = createMockRelease({
+				steam: {
+					app_id: 12345,
+					name: "Test Game",
+					steam_url: "https://store.steampowered.com/app/12345",
+					media: {
+						header_image: "https://cdn.steam.com/header.jpg",
+						screenshots: [
+							"https://cdn.steam.com/screenshot1.jpg",
+							"https://cdn.steam.com/screenshot2.jpg",
+						],
+					},
+				},
+			});
+
+			// Act
+			const result = formatter.formatRelease(release);
+
+			// Assert
+			expect(result.embed?.image?.url).toBe(
+				"https://cdn.steam.com/screenshot1.jpg",
+			);
+			expect(result.embed?.thumbnail?.url).toBe(
+				"https://cdn.steam.com/header.jpg",
+			);
 		});
 
 		it("should handle release without steam data", () => {
@@ -208,9 +242,25 @@ describe("DiscordEmbedFormatter", () => {
 
 			// Assert
 			expect(result.embed?.thumbnail).toBeUndefined();
+			expect(result.embed?.image).toBeUndefined();
+			expect(result.embed?.description).toBe(
+				"[FitGirl](https://fitgirl-repacks.site/test-game/)",
+			);
+		});
+
+		it("should not include Steam/FitGirl buttons in components", () => {
+			// Arrange
+			const release = createMockRelease();
+
+			// Act
+			const result = formatter.formatRelease(release);
+
+			// Assert
 			const buttons = result.components?.[0]?.components ?? [];
 			const steamBtn = buttons.find((b) => b.label === "Steam");
+			const fitgirlBtn = buttons.find((b) => b.label === "FitGirl");
 			expect(steamBtn).toBeUndefined();
+			expect(fitgirlBtn).toBeUndefined();
 		});
 	});
 
