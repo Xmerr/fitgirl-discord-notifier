@@ -175,11 +175,11 @@ export interface DiscordPostMessage {
 }
 
 // qBittorrent Add Download
+// Must match qbittorrent-consumer's DownloadAddMessage contract
 export interface QbittorrentAddDownload {
-	magnet_link: string;
-	category?: string;
-	save_path?: string;
-	tags?: string[];
+	id: string;
+	magnetLink: string;
+	category: "sonarr" | "radarr" | "games";
 }
 
 // Service Interfaces

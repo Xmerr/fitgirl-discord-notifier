@@ -121,9 +121,9 @@ describe("ButtonInteractionService", () => {
 
 			// Assert
 			expect(mockQbittorrentPublisher.addDownload).toHaveBeenCalledWith({
-				magnet_link: "magnet:?xt=urn:btih:abc123",
+				id: "test-guid-123",
+				magnetLink: "magnet:?xt=urn:btih:abc123",
 				category: "games",
-				tags: ["test-guid-123"],
 			});
 			expect(mockGamesRepository.updateDownloadStarted).toHaveBeenCalledWith(
 				"test-guid-123",
