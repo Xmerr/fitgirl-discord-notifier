@@ -227,4 +227,30 @@ describe("GamesRepository", () => {
 			expect(game?.download_completed_at).not.toBeNull();
 		});
 	});
+
+	describe("deleteAll", () => {
+		it("should delete all games and return count", async () => {
+			// Arrange
+			await repository.create(createMockRelease({ guid: "guid-1" }), "channel");
+			await repository.create(createMockRelease({ guid: "guid-2" }), "channel");
+			await repository.create(createMockRelease({ guid: "guid-3" }), "channel");
+
+			// Act
+			const count = await repository.deleteAll();
+
+			// Assert
+			expect(count).toBe(3);
+			expect(await repository.findByGuid("guid-1")).toBeNull();
+			expect(await repository.findByGuid("guid-2")).toBeNull();
+			expect(await repository.findByGuid("guid-3")).toBeNull();
+		});
+
+		it("should return 0 when no games exist", async () => {
+			// Act
+			const count = await repository.deleteAll();
+
+			// Assert
+			expect(count).toBe(0);
+		});
+	});
 });

@@ -109,4 +109,18 @@ export class GamesRepository implements IGamesRepository {
 		this.logger.debug("Download completed", { guid });
 		return Promise.resolve();
 	}
+
+	deleteAll(): Promise<number> {
+		const countSql = "SELECT COUNT(*) as count FROM games";
+		const countStmt = this.db.prepare(countSql);
+		const countResult = countStmt.get() as { count: number };
+		const count = countResult.count;
+
+		const deleteSql = "DELETE FROM games";
+		const deleteStmt = this.db.prepare(deleteSql);
+		deleteStmt.run();
+
+		this.logger.info("All games deleted", { deletedCount: count });
+		return Promise.resolve(count);
+	}
 }

@@ -212,6 +212,7 @@ export interface IGamesRepository {
 	updateTorrentHash(guid: string, hash: string): Promise<void>;
 	updateDownloadStarted(guid: string): Promise<void>;
 	updateDownloadCompleted(guid: string): Promise<void>;
+	deleteAll(): Promise<number>;
 }
 
 export interface IRatingsRepository {
@@ -377,4 +378,25 @@ export interface DatabaseManagerOptions {
 
 export interface DiscordEmbedFormatterOptions {
 	channelId: string;
+}
+
+// Reset Message Types
+export interface ResetMessage {
+	source: string;
+	timestamp: string;
+	target?: "rss-reader" | "discord-notifier" | "all";
+	reason?: string;
+}
+
+export interface IResetService {
+	handleReset(message: ResetMessage): Promise<void>;
+}
+
+export interface ResetServiceOptions {
+	gamesRepository: IGamesRepository;
+	logger: ILogger;
+}
+
+export interface ResetConsumerOptions extends BaseConsumerOptions {
+	resetService: IResetService;
 }
