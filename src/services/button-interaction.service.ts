@@ -104,9 +104,9 @@ export class ButtonInteractionService implements IButtonInteractionService {
 
 		// Publish download request to qBittorrent
 		await this.qbittorrentPublisher.addDownload({
-			magnet_link: game.magnet_link,
+			id: guid,
+			magnetLink: game.magnet_link,
 			category: "games",
-			tags: [guid],
 		});
 
 		// Update database

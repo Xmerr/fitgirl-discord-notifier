@@ -36,7 +36,8 @@ describe("QbittorrentPublisher", () => {
 		it("should publish download request to downloads.add routing key", async () => {
 			// Arrange
 			const download: QbittorrentAddDownload = {
-				magnet_link: "magnet:?xt=urn:btih:abc123",
+				id: "test-guid-123",
+				magnetLink: "magnet:?xt=urn:btih:abc123",
 				category: "games",
 			};
 
@@ -58,9 +59,9 @@ describe("QbittorrentPublisher", () => {
 		it("should serialize download request correctly", async () => {
 			// Arrange
 			const download: QbittorrentAddDownload = {
-				magnet_link: "magnet:?xt=urn:btih:abc123",
+				id: "test-guid-123",
+				magnetLink: "magnet:?xt=urn:btih:abc123",
 				category: "games",
-				tags: ["test-guid"],
 			};
 
 			// Act
@@ -70,9 +71,9 @@ describe("QbittorrentPublisher", () => {
 			const publishCall = mockChannel.publish.mock.calls[0];
 			const buffer = publishCall?.[2] as Buffer;
 			const parsed = JSON.parse(buffer.toString());
-			expect(parsed.magnet_link).toBe("magnet:?xt=urn:btih:abc123");
+			expect(parsed.id).toBe("test-guid-123");
+			expect(parsed.magnetLink).toBe("magnet:?xt=urn:btih:abc123");
 			expect(parsed.category).toBe("games");
-			expect(parsed.tags).toEqual(["test-guid"]);
 		});
 	});
 });
