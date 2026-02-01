@@ -10,6 +10,7 @@ import { DownloadCompleteConsumer } from "./consumers/download-complete.consumer
 import { DownloadProgressConsumer } from "./consumers/download-progress.consumer.js";
 import { ModalInteractionConsumer } from "./consumers/modal-interaction.consumer.js";
 import { ReleaseNewConsumer } from "./consumers/release-new.consumer.js";
+import { ResetConsumer } from "./consumers/reset.consumer.js";
 import { DatabaseManager } from "./database/database.js";
 import { DiscordEmbedFormatter } from "./formatters/discord-embed.formatter.js";
 import { DiscordPublisher } from "./publishers/discord.publisher.js";
@@ -22,6 +23,7 @@ import { DownloadCompleteService } from "./services/download-complete.service.js
 import { DownloadProgressService } from "./services/download-progress.service.js";
 import { ModalInteractionService } from "./services/modal-interaction.service.js";
 import { ReleaseNewService } from "./services/release-new.service.js";
+import { ResetService } from "./services/reset.service.js";
 import { ProgressThrottler } from "./state/progress-throttler.js";
 
 async function main(): Promise<void> {
@@ -134,6 +136,11 @@ async function main(): Promise<void> {
 		logger,
 	});
 
+	const resetService = new ResetService({
+		gamesRepository,
+		logger,
+	});
+
 	// Initialize DLQ handlers
 	const releaseNewDlqHandler = new DlqHandler({
 		channel,
@@ -171,6 +178,14 @@ async function main(): Promise<void> {
 		channel,
 		exchange: "qbittorrent",
 		queue: "qbittorrent.downloads.complete.fitgirl",
+		serviceName: "fitgirl-discord-notifier",
+		logger,
+	});
+
+	const resetDlqHandler = new DlqHandler({
+		channel,
+		exchange: "fitgirl",
+		queue: "fitgirl.reset.discord-notifier",
 		serviceName: "fitgirl-discord-notifier",
 		logger,
 	});
@@ -226,12 +241,23 @@ async function main(): Promise<void> {
 		downloadCompleteService,
 	});
 
+	const resetConsumer = new ResetConsumer({
+		channel,
+		exchange: "fitgirl",
+		queue: "fitgirl.reset.discord-notifier",
+		routingKey: "reset",
+		dlqHandler: resetDlqHandler,
+		logger,
+		resetService,
+	});
+
 	// Start consumers
 	await releaseNewConsumer.start();
 	await buttonInteractionConsumer.start();
 	await modalInteractionConsumer.start();
 	await downloadProgressConsumer.start();
 	await downloadCompleteConsumer.start();
+	await resetConsumer.start();
 
 	logger.info("fitgirl-discord-notifier is running");
 
@@ -244,6 +270,7 @@ async function main(): Promise<void> {
 		await modalInteractionConsumer.stop();
 		await downloadProgressConsumer.stop();
 		await downloadCompleteConsumer.stop();
+		await resetConsumer.stop();
 
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
