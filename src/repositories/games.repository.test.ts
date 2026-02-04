@@ -94,6 +94,27 @@ describe("GamesRepository", () => {
 			expect(result.discord_channel_id).toBe("channel-123");
 		});
 
+		it("should create game with Steam enrichment data", async () => {
+			// Arrange
+			const release = createMockRelease();
+
+			// Act
+			const result = await repository.create(release, "channel-123");
+
+			// Assert
+			expect(result.steam_header_image).toBe(
+				"https://cdn.steam.com/header.jpg",
+			);
+			expect(result.steam_price).toBe("$59.99");
+			expect(result.steam_categories).toBe(
+				JSON.stringify(["Single-player", "Multiplayer"]),
+			);
+			expect(result.steam_review_desc).toBe("Very Positive");
+			expect(result.steam_total_positive).toBe(1000);
+			expect(result.steam_total_negative).toBe(100);
+			expect(result.updated_at).not.toBeNull();
+		});
+
 		it("should create game without steam data", async () => {
 			// Arrange
 			const release = createMockRelease({ steam: null });
@@ -104,6 +125,9 @@ describe("GamesRepository", () => {
 			// Assert
 			expect(result.steam_app_id).toBeNull();
 			expect(result.steam_url).toBeNull();
+			expect(result.steam_header_image).toBeNull();
+			expect(result.steam_price).toBeNull();
+			expect(result.steam_categories).toBeNull();
 		});
 
 		it("should throw DuplicateGameError for duplicate guid", async () => {

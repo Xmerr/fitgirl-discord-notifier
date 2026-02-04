@@ -1,0 +1,14 @@
+[allowlist]
+description = "Project-specific allowlist for false positives"
+
+# Test tokens and placeholder values
+fingerprints = [
+  "428633b09e66cf4a2308d90f26dbf198209f66c4:src/publishers/discord.publisher.test.ts:hardcoded-secret-variable:86",
+  "428633b09e66cf4a2308d90f26dbf198209f66c4:src/publishers/discord.publisher.test.ts:hardcoded-secret-variable:106",
+  "428633b09e66cf4a2308d90f26dbf198209f66c4:src/publishers/discord.publisher.test.ts:hardcoded-secret-variable:130",
+  "70db44cc54066560ed336fa762bd8a35271620f3:.env.example:discord-client-id:4",
+  "70db44cc54066560ed336fa762bd8a35271620f3:README.md:amqp-connection-string:44",
+  "70db44cc54066560ed336fa762bd8a35271620f3:README.md:amqp-connection-string:60",
+  "70db44cc54066560ed336fa762bd8a35271620f3:README.md:discord-client-id:46",
+  "70db44cc54066560ed336fa762bd8a35271620f3:README.md:discord-client-id:62",
+]

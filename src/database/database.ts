@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ILogger } from "@xmer/consumer-shared";
@@ -31,6 +31,9 @@ export class DatabaseManager implements IDatabaseManager {
 			const schema = readFileSync(schemaPath, "utf-8");
 			this.db.exec(schema);
 
+			// Run migrations for existing databases
+			this.runMigrations();
+
 			this.logger.info("Database initialized", { path: this.path });
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -39,6 +42,62 @@ export class DatabaseManager implements IDatabaseManager {
 				"initialize",
 				{ path: this.path },
 			);
+		}
+	}
+
+	private runMigrations(): void {
+		if (!this.db) return;
+
+		// Create migrations table if it doesn't exist
+		this.db.exec(`
+			CREATE TABLE IF NOT EXISTS _migrations (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL UNIQUE,
+				applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`);
+
+		const migrationsDir = join(__dirname, "migrations");
+		if (!existsSync(migrationsDir)) {
+			return;
+		}
+
+		const migrationFiles = readdirSync(migrationsDir)
+			.filter((f) => f.endsWith(".sql"))
+			.sort();
+
+		for (const file of migrationFiles) {
+			const applied = this.db
+				.prepare("SELECT 1 FROM _migrations WHERE name = ?")
+				.get(file);
+
+			if (!applied) {
+				const migrationPath = join(migrationsDir, file);
+				const migration = readFileSync(migrationPath, "utf-8");
+
+				// Execute each statement separately to handle ALTER TABLE failures gracefully
+				const statements = migration
+					.split(";")
+					.map((s) => s.trim())
+					.filter((s) => s.length > 0 && !s.startsWith("--"));
+
+				for (const statement of statements) {
+					try {
+						this.db.exec(statement);
+					} catch (err) {
+						// Ignore "duplicate column" errors from ALTER TABLE
+						const msg = err instanceof Error ? err.message : String(err);
+						if (!msg.includes("duplicate column name")) {
+							throw err;
+						}
+					}
+				}
+
+				this.db
+					.prepare("INSERT INTO _migrations (name) VALUES (?)")
+					.run(file);
+				this.logger.info("Migration applied", { migration: file });
+			}
 		}
 	}
 

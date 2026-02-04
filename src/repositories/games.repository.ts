@@ -21,8 +21,10 @@ export class GamesRepository implements IGamesRepository {
 		const sql = `
 			INSERT INTO games (
 				guid, game_name, title_raw, fitgirl_url, steam_app_id, steam_url, steam_name,
-				magnet_link, size_original, size_repack, pub_date, discord_channel_id
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				magnet_link, size_original, size_repack, pub_date, discord_channel_id,
+				steam_header_image, steam_price, steam_categories, steam_review_score,
+				steam_review_desc, steam_total_positive, steam_total_negative
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			RETURNING *
 		`;
 
@@ -41,6 +43,15 @@ export class GamesRepository implements IGamesRepository {
 				release.size_repack,
 				release.pub_date,
 				channelId,
+				release.steam?.media?.header_image ?? null,
+				release.steam?.price ?? null,
+				release.steam?.categories
+					? JSON.stringify(release.steam.categories)
+					: null,
+				null, // steam_review_score - not provided in input
+				release.steam?.ratings?.review_score_desc ?? null,
+				release.steam?.ratings?.total_positive ?? null,
+				release.steam?.ratings?.total_negative ?? null,
 			) as GameRecord | null;
 
 			if (!result) {
@@ -77,7 +88,8 @@ export class GamesRepository implements IGamesRepository {
 	}
 
 	updateDiscordMessageId(guid: string, messageId: string): Promise<void> {
-		const sql = "UPDATE games SET discord_message_id = ? WHERE guid = ?";
+		const sql =
+			"UPDATE games SET discord_message_id = ?, updated_at = datetime('now') WHERE guid = ?";
 		const stmt = this.db.prepare(sql);
 		stmt.run(messageId, guid);
 		this.logger.debug("Discord message ID updated", { guid, messageId });
@@ -85,7 +97,8 @@ export class GamesRepository implements IGamesRepository {
 	}
 
 	updateTorrentHash(guid: string, hash: string): Promise<void> {
-		const sql = "UPDATE games SET torrent_hash = ? WHERE guid = ?";
+		const sql =
+			"UPDATE games SET torrent_hash = ?, updated_at = datetime('now') WHERE guid = ?";
 		const stmt = this.db.prepare(sql);
 		stmt.run(hash, guid);
 		this.logger.debug("Torrent hash updated", { guid, hash });
@@ -94,7 +107,7 @@ export class GamesRepository implements IGamesRepository {
 
 	updateDownloadStarted(guid: string): Promise<void> {
 		const sql =
-			"UPDATE games SET download_started_at = datetime('now') WHERE guid = ?";
+			"UPDATE games SET download_started_at = datetime('now'), updated_at = datetime('now') WHERE guid = ?";
 		const stmt = this.db.prepare(sql);
 		stmt.run(guid);
 		this.logger.debug("Download started", { guid });
@@ -103,7 +116,7 @@ export class GamesRepository implements IGamesRepository {
 
 	updateDownloadCompleted(guid: string): Promise<void> {
 		const sql =
-			"UPDATE games SET download_completed_at = datetime('now') WHERE guid = ?";
+			"UPDATE games SET download_completed_at = datetime('now'), updated_at = datetime('now') WHERE guid = ?";
 		const stmt = this.db.prepare(sql);
 		stmt.run(guid);
 		this.logger.debug("Download completed", { guid });

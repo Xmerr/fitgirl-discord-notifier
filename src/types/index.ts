@@ -107,6 +107,7 @@ export interface GameRecord {
 	guid: string;
 	game_name: string;
 	title_raw: string;
+	corrected_name: string | null;
 	fitgirl_url: string;
 	steam_app_id: number | null;
 	steam_url: string | null;
@@ -121,6 +122,17 @@ export interface GameRecord {
 	download_started_at: string | null;
 	download_completed_at: string | null;
 	created_at: string;
+	updated_at: string;
+	// Steam enrichment data
+	steam_header_image: string | null;
+	steam_price: string | null;
+	steam_categories: string | null;
+	steam_review_score: string | null;
+	steam_review_desc: string | null;
+	steam_total_positive: number | null;
+	steam_total_negative: number | null;
+	// Single rating per game
+	rating: "upvote" | "downvote" | null;
 }
 
 export interface RatingRecord {
