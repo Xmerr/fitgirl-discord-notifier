@@ -93,9 +93,7 @@ export class DatabaseManager implements IDatabaseManager {
 					}
 				}
 
-				this.db
-					.prepare("INSERT INTO _migrations (name) VALUES (?)")
-					.run(file);
+				this.db.prepare("INSERT INTO _migrations (name) VALUES (?)").run(file);
 				this.logger.info("Migration applied", { migration: file });
 			}
 		}
