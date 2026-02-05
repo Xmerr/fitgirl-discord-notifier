@@ -4,7 +4,10 @@ import { fileURLToPath } from "node:url";
 import type { ILogger } from "@xmer/consumer-shared";
 import postgres, { type Sql } from "postgres";
 import { DatabaseError } from "../errors/index.js";
-import type { DatabaseManagerOptions, IDatabaseManager } from "../types/index.js";
+import type {
+	DatabaseManagerOptions,
+	IDatabaseManager,
+} from "../types/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

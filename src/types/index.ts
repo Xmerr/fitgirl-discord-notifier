@@ -1,4 +1,3 @@
-import type { Sql } from "postgres";
 import type {
 	BaseConsumerOptions,
 	ILogger,
@@ -6,6 +5,7 @@ import type {
 } from "@xmer/consumer-shared";
 import type { Channel } from "amqplib";
 import type { Redis } from "ioredis";
+import type { Sql } from "postgres";
 
 // FitGirl Release (from fitgirl-rss-reader)
 export interface SteamRatings {

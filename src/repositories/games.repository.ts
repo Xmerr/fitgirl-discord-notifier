@@ -1,5 +1,5 @@
-import type { Sql } from "postgres";
 import type { ILogger } from "@xmer/consumer-shared";
+import type { Sql } from "postgres";
 import { DatabaseError, DuplicateGameError } from "../errors/index.js";
 import type {
 	FitGirlRelease,
@@ -17,7 +17,10 @@ export class GamesRepository implements IGamesRepository {
 		this.logger = options.logger.child({ component: "GamesRepository" });
 	}
 
-	async create(release: FitGirlRelease, channelId: string): Promise<GameRecord> {
+	async create(
+		release: FitGirlRelease,
+		channelId: string,
+	): Promise<GameRecord> {
 		try {
 			const [result] = await this.sql<GameRecord[]>`
 				INSERT INTO games (
@@ -118,7 +121,10 @@ export class GamesRepository implements IGamesRepository {
 		this.logger.debug("Download completed", { guid });
 	}
 
-	async updateRating(guid: string, rating: "upvote" | "downvote"): Promise<void> {
+	async updateRating(
+		guid: string,
+		rating: "upvote" | "downvote",
+	): Promise<void> {
 		await this.sql`
 			UPDATE games
 			SET rating = ${rating}, updated_at = NOW()
