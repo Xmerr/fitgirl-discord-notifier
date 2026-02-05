@@ -8,7 +8,6 @@ import type {
 	IDiscordPublisher,
 	IGamesRepository,
 	IQbittorrentPublisher,
-	IRatingsRepository,
 } from "../types/index.js";
 import { ButtonInteractionService } from "./button-interaction.service.js";
 
@@ -25,6 +24,7 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	guid: "test-guid-123",
 	game_name: "Test Game",
 	title_raw: "Test Game – v1.0",
+	corrected_name: null,
 	fitgirl_url: "https://fitgirl-repacks.site/test-game/",
 	steam_app_id: null,
 	steam_url: null,
@@ -39,6 +39,15 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	download_started_at: null,
 	download_completed_at: null,
 	created_at: "2024-01-15T12:00:00.000Z",
+	updated_at: "2024-01-15T12:00:00.000Z",
+	steam_header_image: null,
+	steam_price: null,
+	steam_categories: null,
+	steam_review_score: null,
+	steam_review_desc: null,
+	steam_total_positive: null,
+	steam_total_negative: null,
+	rating: null,
 	...overrides,
 });
 
@@ -46,10 +55,7 @@ describe("ButtonInteractionService", () => {
 	let mockGamesRepository: {
 		findByGuid: ReturnType<typeof mock>;
 		updateDownloadStarted: ReturnType<typeof mock>;
-	};
-	let mockRatingsRepository: {
-		upsert: ReturnType<typeof mock>;
-		getCountsByGameId: ReturnType<typeof mock>;
+		updateRating: ReturnType<typeof mock>;
 	};
 	let mockQbittorrentPublisher: {
 		addDownload: ReturnType<typeof mock>;
@@ -59,6 +65,7 @@ describe("ButtonInteractionService", () => {
 	};
 	let mockFormatter: {
 		formatDownloadStarted: ReturnType<typeof mock>;
+		formatDownloadComplete: ReturnType<typeof mock>;
 	};
 	let service: ButtonInteractionService;
 
@@ -66,13 +73,7 @@ describe("ButtonInteractionService", () => {
 		mockGamesRepository = {
 			findByGuid: mock(() => Promise.resolve(createMockGame())),
 			updateDownloadStarted: mock(() => Promise.resolve()),
-		};
-
-		mockRatingsRepository = {
-			upsert: mock(() => Promise.resolve()),
-			getCountsByGameId: mock(() =>
-				Promise.resolve({ upvotes: 0, downvotes: 0 }),
-			),
+			updateRating: mock(() => Promise.resolve()),
 		};
 
 		mockQbittorrentPublisher = {
@@ -89,11 +90,15 @@ describe("ButtonInteractionService", () => {
 				channel_id: "channel-123",
 				embed: { title: "Test Game" },
 			})),
+			formatDownloadComplete: mock(() => ({
+				id: "test-guid-123",
+				channel_id: "channel-123",
+				embed: { title: "Test Game - Complete" },
+			})),
 		};
 
 		service = new ButtonInteractionService({
 			gamesRepository: mockGamesRepository as unknown as IGamesRepository,
-			ratingsRepository: mockRatingsRepository as unknown as IRatingsRepository,
 			qbittorrentPublisher:
 				mockQbittorrentPublisher as unknown as IQbittorrentPublisher,
 			discordPublisher: mockDiscordPublisher as unknown as IDiscordPublisher,
@@ -218,9 +223,8 @@ describe("ButtonInteractionService", () => {
 			await service.handleInteraction(message);
 
 			// Assert
-			expect(mockRatingsRepository.upsert).toHaveBeenCalledWith(
-				1,
-				"user-123",
+			expect(mockGamesRepository.updateRating).toHaveBeenCalledWith(
+				"test-guid-123",
 				"upvote",
 			);
 		});
@@ -244,9 +248,8 @@ describe("ButtonInteractionService", () => {
 			await service.handleInteraction(message);
 
 			// Assert
-			expect(mockRatingsRepository.upsert).toHaveBeenCalledWith(
-				1,
-				"user-123",
+			expect(mockGamesRepository.updateRating).toHaveBeenCalledWith(
+				"test-guid-123",
 				"downvote",
 			);
 		});

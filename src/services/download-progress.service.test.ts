@@ -7,7 +7,6 @@ import type {
 	IDiscordPublisher,
 	IGamesRepository,
 	IProgressThrottler,
-	IRatingsRepository,
 } from "../types/index.js";
 import { DownloadProgressService } from "./download-progress.service.js";
 
@@ -19,11 +18,12 @@ const mockLogger: ILogger = {
 	child: mock(() => mockLogger),
 };
 
-const createMockGame = (): GameRecord => ({
+const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	id: 1,
 	guid: "test-guid-123",
 	game_name: "Test Game",
 	title_raw: "Test Game – v1.0",
+	corrected_name: null,
 	fitgirl_url: "https://fitgirl-repacks.site/test-game/",
 	steam_app_id: null,
 	steam_url: null,
@@ -38,14 +38,21 @@ const createMockGame = (): GameRecord => ({
 	download_started_at: "2024-01-15T12:00:00.000Z",
 	download_completed_at: null,
 	created_at: "2024-01-15T12:00:00.000Z",
+	updated_at: "2024-01-15T12:00:00.000Z",
+	steam_header_image: null,
+	steam_price: null,
+	steam_categories: null,
+	steam_review_score: null,
+	steam_review_desc: null,
+	steam_total_positive: null,
+	steam_total_negative: null,
+	rating: null,
+	...overrides,
 });
 
 describe("DownloadProgressService", () => {
 	let mockGamesRepository: {
 		findByTorrentHash: ReturnType<typeof mock>;
-	};
-	let mockRatingsRepository: {
-		getCountsByGameId: ReturnType<typeof mock>;
 	};
 	let mockDiscordPublisher: {
 		sendPost: ReturnType<typeof mock>;
@@ -62,12 +69,6 @@ describe("DownloadProgressService", () => {
 	beforeEach(() => {
 		mockGamesRepository = {
 			findByTorrentHash: mock(() => Promise.resolve(createMockGame())),
-		};
-
-		mockRatingsRepository = {
-			getCountsByGameId: mock(() =>
-				Promise.resolve({ upvotes: 5, downvotes: 1 }),
-			),
 		};
 
 		mockDiscordPublisher = {
@@ -89,7 +90,6 @@ describe("DownloadProgressService", () => {
 
 		service = new DownloadProgressService({
 			gamesRepository: mockGamesRepository as unknown as IGamesRepository,
-			ratingsRepository: mockRatingsRepository as unknown as IRatingsRepository,
 			discordPublisher: mockDiscordPublisher as unknown as IDiscordPublisher,
 			formatter: mockFormatter as unknown as IDiscordEmbedFormatter,
 			progressThrottler: mockProgressThrottler as unknown as IProgressThrottler,
@@ -167,6 +167,9 @@ describe("DownloadProgressService", () => {
 
 		it("should include ratings in progress update", async () => {
 			// Arrange
+			const gameWithRating = createMockGame({ rating: "upvote" });
+			mockGamesRepository.findByTorrentHash.mockResolvedValue(gameWithRating);
+
 			const progress: DownloadProgressMessage = {
 				hash: "abc123hash",
 				name: "Test Game",
@@ -180,11 +183,9 @@ describe("DownloadProgressService", () => {
 			await service.handleProgress(progress);
 
 			// Assert
-			expect(mockRatingsRepository.getCountsByGameId).toHaveBeenCalledWith(1);
 			expect(mockFormatter.formatProgressUpdate).toHaveBeenCalledWith(
-				expect.any(Object),
+				gameWithRating,
 				progress,
-				{ upvotes: 5, downvotes: 1 },
 			);
 		});
 	});

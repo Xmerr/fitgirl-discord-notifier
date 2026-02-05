@@ -45,6 +45,7 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	guid: "test-guid-123",
 	game_name: "Test Game",
 	title_raw: "Test Game – v1.0",
+	corrected_name: null,
 	fitgirl_url: "https://fitgirl-repacks.site/test-game/",
 	steam_app_id: 12345,
 	steam_url: "https://store.steampowered.com/app/12345",
@@ -59,6 +60,15 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	download_started_at: null,
 	download_completed_at: null,
 	created_at: "2024-01-15T12:00:00.000Z",
+	updated_at: "2024-01-15T12:00:00.000Z",
+	steam_header_image: "https://cdn.steam.com/header.jpg",
+	steam_price: "$59.99",
+	steam_categories: '["Single-player"]',
+	steam_review_score: null,
+	steam_review_desc: "Very Positive",
+	steam_total_positive: 900,
+	steam_total_negative: 100,
+	rating: null,
 	...overrides,
 });
 
@@ -277,10 +287,9 @@ describe("DiscordEmbedFormatter", () => {
 				state: "downloading",
 				category: "games",
 			};
-			const ratings = { upvotes: 5, downvotes: 1 };
 
 			// Act
-			const result = formatter.formatProgressUpdate(game, progress, ratings);
+			const result = formatter.formatProgressUpdate(game, progress);
 
 			// Assert
 			expect(result.id).toBe("test-guid-123");
@@ -302,10 +311,9 @@ describe("DiscordEmbedFormatter", () => {
 				eta: 7200,
 				state: "downloading",
 			};
-			const ratings = { upvotes: 0, downvotes: 0 };
 
 			// Act
-			const result = formatter.formatProgressUpdate(game, progress, ratings);
+			const result = formatter.formatProgressUpdate(game, progress);
 
 			// Assert
 			const speedField = result.embed?.fields?.find((f) => f.name === "Speed");
@@ -323,10 +331,9 @@ describe("DiscordEmbedFormatter", () => {
 				eta: 3665, // 1h 1m 5s
 				state: "downloading",
 			};
-			const ratings = { upvotes: 0, downvotes: 0 };
 
 			// Act
-			const result = formatter.formatProgressUpdate(game, progress, ratings);
+			const result = formatter.formatProgressUpdate(game, progress);
 
 			// Assert
 			const etaField = result.embed?.fields?.find((f) => f.name === "ETA");
@@ -344,19 +351,18 @@ describe("DiscordEmbedFormatter", () => {
 				eta: 8640000,
 				state: "downloading",
 			};
-			const ratings = { upvotes: 0, downvotes: 0 };
 
 			// Act
-			const result = formatter.formatProgressUpdate(game, progress, ratings);
+			const result = formatter.formatProgressUpdate(game, progress);
 
 			// Assert
 			const etaField = result.embed?.fields?.find((f) => f.name === "ETA");
 			expect(etaField?.value).toBe("Unknown");
 		});
 
-		it("should include ratings in progress update", () => {
+		it("should include rating in progress update", () => {
 			// Arrange
-			const game = createMockGame();
+			const game = createMockGame({ rating: "upvote" });
 			const progress: DownloadProgressMessage = {
 				hash: "abc123",
 				name: "Test Game",
@@ -365,17 +371,15 @@ describe("DiscordEmbedFormatter", () => {
 				eta: 100,
 				state: "downloading",
 			};
-			const ratings = { upvotes: 10, downvotes: 2 };
 
 			// Act
-			const result = formatter.formatProgressUpdate(game, progress, ratings);
+			const result = formatter.formatProgressUpdate(game, progress);
 
 			// Assert
-			const ratingsField = result.embed?.fields?.find(
-				(f) => f.name === "Ratings",
+			const ratingField = result.embed?.fields?.find(
+				(f) => f.name === "Rating",
 			);
-			expect(ratingsField?.value).toContain("10");
-			expect(ratingsField?.value).toContain("2");
+			expect(ratingField?.value).toContain("Upvoted");
 		});
 	});
 
@@ -385,10 +389,9 @@ describe("DiscordEmbedFormatter", () => {
 			const game = createMockGame({
 				download_completed_at: "2024-01-15T13:00:00Z",
 			});
-			const ratings = { upvotes: 5, downvotes: 1 };
 
 			// Act
-			const result = formatter.formatDownloadComplete(game, ratings);
+			const result = formatter.formatDownloadComplete(game);
 
 			// Assert
 			expect(result.embed?.color).toBe(0x00aaff);
@@ -401,10 +404,9 @@ describe("DiscordEmbedFormatter", () => {
 		it("should disable download button", () => {
 			// Arrange
 			const game = createMockGame();
-			const ratings = { upvotes: 0, downvotes: 0 };
 
 			// Act
-			const result = formatter.formatDownloadComplete(game, ratings);
+			const result = formatter.formatDownloadComplete(game);
 
 			// Assert
 			const buttons = result.components?.[0]?.components ?? [];
@@ -419,10 +421,9 @@ describe("DiscordEmbedFormatter", () => {
 			const game = createMockGame({
 				download_started_at: "2024-01-15T12:30:00Z",
 			});
-			const ratings = { upvotes: 3, downvotes: 0 };
 
 			// Act
-			const result = formatter.formatDownloadStarted(game, ratings);
+			const result = formatter.formatDownloadStarted(game);
 
 			// Assert
 			expect(result.embed?.color).toBe(0xffaa00);
@@ -435,10 +436,9 @@ describe("DiscordEmbedFormatter", () => {
 		it("should use game channel_id over default", () => {
 			// Arrange
 			const game = createMockGame({ discord_channel_id: "custom-channel" });
-			const ratings = { upvotes: 0, downvotes: 0 };
 
 			// Act
-			const result = formatter.formatDownloadStarted(game, ratings);
+			const result = formatter.formatDownloadStarted(game);
 
 			// Assert
 			expect(result.channel_id).toBe("custom-channel");

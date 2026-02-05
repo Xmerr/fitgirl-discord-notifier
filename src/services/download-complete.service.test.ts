@@ -6,7 +6,6 @@ import type {
 	IDiscordEmbedFormatter,
 	IDiscordPublisher,
 	IGamesRepository,
-	IRatingsRepository,
 } from "../types/index.js";
 import { DownloadCompleteService } from "./download-complete.service.js";
 
@@ -23,6 +22,7 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	guid: "test-guid-123",
 	game_name: "Test Game",
 	title_raw: "Test Game – v1.0",
+	corrected_name: null,
 	fitgirl_url: "https://fitgirl-repacks.site/test-game/",
 	steam_app_id: null,
 	steam_url: null,
@@ -37,6 +37,15 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	download_started_at: "2024-01-15T12:00:00.000Z",
 	download_completed_at: null,
 	created_at: "2024-01-15T12:00:00.000Z",
+	updated_at: "2024-01-15T12:00:00.000Z",
+	steam_header_image: null,
+	steam_price: null,
+	steam_categories: null,
+	steam_review_score: null,
+	steam_review_desc: null,
+	steam_total_positive: null,
+	steam_total_negative: null,
+	rating: null,
 	...overrides,
 });
 
@@ -45,9 +54,6 @@ describe("DownloadCompleteService", () => {
 		findByTorrentHash: ReturnType<typeof mock>;
 		findByGuid: ReturnType<typeof mock>;
 		updateDownloadCompleted: ReturnType<typeof mock>;
-	};
-	let mockRatingsRepository: {
-		getCountsByGameId: ReturnType<typeof mock>;
 	};
 	let mockDiscordPublisher: {
 		sendPost: ReturnType<typeof mock>;
@@ -68,12 +74,6 @@ describe("DownloadCompleteService", () => {
 			updateDownloadCompleted: mock(() => Promise.resolve()),
 		};
 
-		mockRatingsRepository = {
-			getCountsByGameId: mock(() =>
-				Promise.resolve({ upvotes: 10, downvotes: 2 }),
-			),
-		};
-
 		mockDiscordPublisher = {
 			sendPost: mock(() => Promise.resolve()),
 		};
@@ -88,7 +88,6 @@ describe("DownloadCompleteService", () => {
 
 		service = new DownloadCompleteService({
 			gamesRepository: mockGamesRepository as unknown as IGamesRepository,
-			ratingsRepository: mockRatingsRepository as unknown as IRatingsRepository,
 			discordPublisher: mockDiscordPublisher as unknown as IDiscordPublisher,
 			formatter: mockFormatter as unknown as IDiscordEmbedFormatter,
 			logger: mockLogger,
@@ -112,7 +111,6 @@ describe("DownloadCompleteService", () => {
 			expect(mockGamesRepository.updateDownloadCompleted).toHaveBeenCalledWith(
 				"test-guid-123",
 			);
-			expect(mockRatingsRepository.getCountsByGameId).toHaveBeenCalledWith(1);
 			expect(mockFormatter.formatDownloadComplete).toHaveBeenCalled();
 			expect(mockDiscordPublisher.sendPost).toHaveBeenCalled();
 		});
@@ -140,6 +138,12 @@ describe("DownloadCompleteService", () => {
 
 		it("should include ratings in complete message", async () => {
 			// Arrange
+			const gameWithRating = createMockGame({
+				download_completed_at: "2024-01-15T13:00:00Z",
+				rating: "upvote",
+			});
+			mockGamesRepository.findByGuid.mockResolvedValue(gameWithRating);
+
 			const complete: DownloadCompleteMessage = {
 				hash: "abc123hash",
 				name: "Test Game",
@@ -152,8 +156,7 @@ describe("DownloadCompleteService", () => {
 
 			// Assert
 			expect(mockFormatter.formatDownloadComplete).toHaveBeenCalledWith(
-				expect.any(Object),
-				{ upvotes: 10, downvotes: 2 },
+				gameWithRating,
 			);
 		});
 	});

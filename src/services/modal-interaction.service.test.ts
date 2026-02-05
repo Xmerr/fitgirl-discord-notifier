@@ -3,7 +3,6 @@ import type { ILogger } from "@xmer/consumer-shared";
 import { GameNotFoundError, InvalidSteamUrlError } from "../errors/index.js";
 import type {
 	GameRecord,
-	ICorrectionsRepository,
 	IDiscordPublisher,
 	IGamesRepository,
 	ModalInteractionMessage,
@@ -23,6 +22,7 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	guid: "test-guid-123",
 	game_name: "Test Game",
 	title_raw: "Test Game – v1.0",
+	corrected_name: null,
 	fitgirl_url: "https://fitgirl-repacks.site/test-game/",
 	steam_app_id: 12345,
 	steam_url: "https://store.steampowered.com/app/12345",
@@ -37,6 +37,15 @@ const createMockGame = (overrides: Partial<GameRecord> = {}): GameRecord => ({
 	download_started_at: null,
 	download_completed_at: null,
 	created_at: "2024-01-15T12:00:00.000Z",
+	updated_at: "2024-01-15T12:00:00.000Z",
+	steam_header_image: null,
+	steam_price: null,
+	steam_categories: null,
+	steam_review_score: null,
+	steam_review_desc: null,
+	steam_total_positive: null,
+	steam_total_negative: null,
+	rating: null,
 	...overrides,
 });
 
@@ -57,9 +66,6 @@ describe("ModalInteractionService", () => {
 	let mockGamesRepository: {
 		findByGuid: ReturnType<typeof mock>;
 	};
-	let mockCorrectionsRepository: {
-		create: ReturnType<typeof mock>;
-	};
 	let mockDiscordPublisher: {
 		sendInteractionResponse: ReturnType<typeof mock>;
 	};
@@ -70,25 +76,19 @@ describe("ModalInteractionService", () => {
 			findByGuid: mock(() => Promise.resolve(createMockGame())),
 		};
 
-		mockCorrectionsRepository = {
-			create: mock(() => Promise.resolve()),
-		};
-
 		mockDiscordPublisher = {
 			sendInteractionResponse: mock(() => Promise.resolve()),
 		};
 
 		service = new ModalInteractionService({
 			gamesRepository: mockGamesRepository as unknown as IGamesRepository,
-			correctionsRepository:
-				mockCorrectionsRepository as unknown as ICorrectionsRepository,
 			discordPublisher: mockDiscordPublisher as unknown as IDiscordPublisher,
 			logger: mockLogger,
 		});
 	});
 
 	describe("handleModalSubmission - success", () => {
-		it("should store correction and send success response", async () => {
+		it("should send success response for valid correction", async () => {
 			// Arrange
 			const message = createMockMessage();
 
@@ -96,16 +96,10 @@ describe("ModalInteractionService", () => {
 			await service.handleModalSubmission(message);
 
 			// Assert
-			expect(mockCorrectionsRepository.create).toHaveBeenCalledWith(
-				1,
-				"user-123",
-				"https://store.steampowered.com/app/12345",
-				"https://store.steampowered.com/app/99999",
-			);
 			expect(mockDiscordPublisher.sendInteractionResponse).toHaveBeenCalledWith(
 				"int-123",
 				"token-123",
-				'Steam URL correction recorded for "Test Game". Thank you for helping improve our matching!',
+				'Steam URL correction noted for "Test Game". Thank you for the feedback!',
 				true,
 			);
 		});
@@ -121,11 +115,11 @@ describe("ModalInteractionService", () => {
 			await service.handleModalSubmission(message);
 
 			// Assert
-			expect(mockCorrectionsRepository.create).toHaveBeenCalledWith(
-				1,
-				"user-123",
-				null,
-				"https://store.steampowered.com/app/99999",
+			expect(mockDiscordPublisher.sendInteractionResponse).toHaveBeenCalledWith(
+				"int-123",
+				"token-123",
+				'Steam URL correction noted for "Test Game". Thank you for the feedback!',
+				true,
 			);
 		});
 	});
@@ -146,22 +140,6 @@ describe("ModalInteractionService", () => {
 				"Game not found. The original post may have been deleted.",
 				true,
 			);
-		});
-
-		it("should not store correction when game not found", async () => {
-			// Arrange
-			mockGamesRepository.findByGuid.mockResolvedValue(null);
-			const message = createMockMessage();
-
-			// Act
-			try {
-				await service.handleModalSubmission(message);
-			} catch {
-				// Expected
-			}
-
-			// Assert
-			expect(mockCorrectionsRepository.create).not.toHaveBeenCalled();
 		});
 	});
 
@@ -241,11 +219,11 @@ describe("ModalInteractionService", () => {
 			await service.handleModalSubmission(message);
 
 			// Assert
-			expect(mockCorrectionsRepository.create).toHaveBeenCalledWith(
-				1,
-				"user-123",
-				"https://store.steampowered.com/app/12345",
-				"https://store.steampowered.com/app/570/Dota_2/",
+			expect(mockDiscordPublisher.sendInteractionResponse).toHaveBeenCalledWith(
+				"int-123",
+				"token-123",
+				'Steam URL correction noted for "Test Game". Thank you for the feedback!',
+				true,
 			);
 		});
 
@@ -259,7 +237,7 @@ describe("ModalInteractionService", () => {
 			await service.handleModalSubmission(message);
 
 			// Assert
-			expect(mockCorrectionsRepository.create).toHaveBeenCalled();
+			expect(mockDiscordPublisher.sendInteractionResponse).toHaveBeenCalled();
 		});
 	});
 
