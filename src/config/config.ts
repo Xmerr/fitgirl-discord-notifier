@@ -4,7 +4,7 @@ export class Config {
 	readonly rabbitmqUrl: string;
 	readonly redisUrl: string;
 	readonly discordChannelId: string;
-	readonly databasePath: string;
+	readonly postgresUrl: string;
 	readonly progressThrottleMs: number;
 	readonly lokiHost: string | undefined;
 	readonly logLevel: string;
@@ -13,7 +13,7 @@ export class Config {
 		this.rabbitmqUrl = this.requireEnv(env, "RABBITMQ_URL");
 		this.redisUrl = this.requireEnv(env, "REDIS_URL");
 		this.discordChannelId = this.requireEnv(env, "DISCORD_CHANNEL_ID");
-		this.databasePath = env.DATABASE_PATH ?? "/app/data/fitgirl.db";
+		this.postgresUrl = this.requireEnv(env, "POSTGRES_URL");
 		this.progressThrottleMs = this.parseNumber(env.PROGRESS_THROTTLE_MS, 30000);
 		this.lokiHost = env.LOKI_HOST;
 		this.logLevel = env.LOG_LEVEL ?? "info";

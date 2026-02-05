@@ -1,7 +1,6 @@
 import type { ILogger } from "@xmer/consumer-shared";
 import { GameNotFoundError, InvalidSteamUrlError } from "../errors/index.js";
 import type {
-	ICorrectionsRepository,
 	IDiscordPublisher,
 	IGamesRepository,
 	IModalInteractionService,
@@ -13,13 +12,11 @@ const STEAM_URL_REGEX = /^https:\/\/store\.steampowered\.com\/app\/(\d+)/;
 
 export class ModalInteractionService implements IModalInteractionService {
 	private readonly gamesRepository: IGamesRepository;
-	private readonly correctionsRepository: ICorrectionsRepository;
 	private readonly discordPublisher: IDiscordPublisher;
 	private readonly logger: ILogger;
 
 	constructor(options: ModalInteractionServiceOptions) {
 		this.gamesRepository = options.gamesRepository;
-		this.correctionsRepository = options.correctionsRepository;
 		this.discordPublisher = options.discordPublisher;
 		this.logger = options.logger.child({
 			component: "ModalInteractionService",
@@ -62,15 +59,8 @@ export class ModalInteractionService implements IModalInteractionService {
 			throw new GameNotFoundError(guid);
 		}
 
-		// Store the correction
-		await this.correctionsRepository.create(
-			game.id,
-			message.user_id,
-			game.steam_url,
-			steamUrl,
-		);
-
-		this.logger.info("Steam URL correction stored", {
+		// Log the correction (corrections table removed - just log for now)
+		this.logger.info("Steam URL correction submitted", {
 			guid,
 			game_id: game.id,
 			user_id: message.user_id,
@@ -83,7 +73,7 @@ export class ModalInteractionService implements IModalInteractionService {
 		await this.discordPublisher.sendInteractionResponse(
 			message.interaction_id,
 			message.interaction_token,
-			`Steam URL correction recorded for "${game.game_name}". Thank you for helping improve our matching!`,
+			`Steam URL correction noted for "${game.game_name}". Thank you for the feedback!`,
 			true,
 		);
 	}

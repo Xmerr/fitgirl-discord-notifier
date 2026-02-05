@@ -15,9 +15,7 @@ import { DatabaseManager } from "./database/database.js";
 import { DiscordEmbedFormatter } from "./formatters/discord-embed.formatter.js";
 import { DiscordPublisher } from "./publishers/discord.publisher.js";
 import { QbittorrentPublisher } from "./publishers/qbittorrent.publisher.js";
-import { CorrectionsRepository } from "./repositories/corrections.repository.js";
 import { GamesRepository } from "./repositories/games.repository.js";
-import { RatingsRepository } from "./repositories/ratings.repository.js";
 import { ButtonInteractionService } from "./services/button-interaction.service.js";
 import { DownloadCompleteService } from "./services/download-complete.service.js";
 import { DownloadProgressService } from "./services/download-progress.service.js";
@@ -40,7 +38,7 @@ async function main(): Promise<void> {
 
 	// Initialize database
 	const databaseManager = new DatabaseManager({
-		path: config.databasePath,
+		connectionString: config.postgresUrl,
 		logger,
 	});
 	await databaseManager.initialize();
@@ -71,10 +69,8 @@ async function main(): Promise<void> {
 	const channel = connectionManager.getChannel();
 
 	// Initialize repositories
-	const db = databaseManager.getDb();
-	const gamesRepository = new GamesRepository({ db, logger });
-	const ratingsRepository = new RatingsRepository({ db, logger });
-	const correctionsRepository = new CorrectionsRepository({ db, logger });
+	const sql = databaseManager.getSql();
+	const gamesRepository = new GamesRepository({ sql, logger });
 
 	// Initialize formatter
 	const formatter = new DiscordEmbedFormatter({
@@ -105,7 +101,6 @@ async function main(): Promise<void> {
 
 	const buttonInteractionService = new ButtonInteractionService({
 		gamesRepository,
-		ratingsRepository,
 		qbittorrentPublisher,
 		discordPublisher,
 		formatter,
@@ -114,14 +109,12 @@ async function main(): Promise<void> {
 
 	const modalInteractionService = new ModalInteractionService({
 		gamesRepository,
-		correctionsRepository,
 		discordPublisher,
 		logger,
 	});
 
 	const downloadProgressService = new DownloadProgressService({
 		gamesRepository,
-		ratingsRepository,
 		discordPublisher,
 		formatter,
 		progressThrottler,
@@ -130,7 +123,6 @@ async function main(): Promise<void> {
 
 	const downloadCompleteService = new DownloadCompleteService({
 		gamesRepository,
-		ratingsRepository,
 		discordPublisher,
 		formatter,
 		logger,
@@ -276,7 +268,7 @@ async function main(): Promise<void> {
 
 		await connectionManager.close();
 		await progressThrottler.disconnect();
-		databaseManager.close();
+		await databaseManager.close();
 
 		logger.info("Shutdown complete");
 		process.exit(0);

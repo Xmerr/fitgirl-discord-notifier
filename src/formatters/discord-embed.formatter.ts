@@ -46,7 +46,6 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 	formatProgressUpdate(
 		game: GameRecord,
 		progress: DownloadProgressMessage,
-		ratings: { upvotes: number; downvotes: number },
 	): DiscordPostMessage {
 		const percentage = Math.round(progress.progress * 100);
 		const speedMBps = (progress.download_speed / (1024 * 1024)).toFixed(2);
@@ -78,8 +77,8 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 					inline: false,
 				},
 				{
-					name: "Ratings",
-					value: this.formatRatings(ratings),
+					name: "Rating",
+					value: this.formatRating(game.rating),
 					inline: false,
 				},
 			],
@@ -102,10 +101,7 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 		};
 	}
 
-	formatDownloadComplete(
-		game: GameRecord,
-		ratings: { upvotes: number; downvotes: number },
-	): DiscordPostMessage {
+	formatDownloadComplete(game: GameRecord): DiscordPostMessage {
 		const embed: DiscordEmbed = {
 			title: game.game_name,
 			url: game.fitgirl_url,
@@ -122,8 +118,8 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 					inline: true,
 				},
 				{
-					name: "Ratings",
-					value: this.formatRatings(ratings),
+					name: "Rating",
+					value: this.formatRating(game.rating),
 					inline: false,
 				},
 			],
@@ -146,10 +142,7 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 		};
 	}
 
-	formatDownloadStarted(
-		game: GameRecord,
-		ratings: { upvotes: number; downvotes: number },
-	): DiscordPostMessage {
+	formatDownloadStarted(game: GameRecord): DiscordPostMessage {
 		const embed: DiscordEmbed = {
 			title: game.game_name,
 			url: game.fitgirl_url,
@@ -166,8 +159,8 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 					inline: true,
 				},
 				{
-					name: "Ratings",
-					value: this.formatRatings(ratings),
+					name: "Rating",
+					value: this.formatRating(game.rating),
 					inline: false,
 				},
 			],
@@ -290,13 +283,13 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 				type: 2,
 				style: BUTTON_STYLES.SUCCESS,
 				custom_id: `fitgirl_upvote_${release.guid}`,
-				emoji: { name: "👍" },
+				emoji: { name: "\u{1F44D}" },
 			},
 			{
 				type: 2,
 				style: BUTTON_STYLES.DANGER,
 				custom_id: `fitgirl_downvote_${release.guid}`,
-				emoji: { name: "👎" },
+				emoji: { name: "\u{1F44E}" },
 			},
 		);
 
@@ -321,13 +314,13 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 				type: 2,
 				style: BUTTON_STYLES.SUCCESS,
 				custom_id: `fitgirl_upvote_${game.guid}`,
-				emoji: { name: "👍" },
+				emoji: { name: "\u{1F44D}" },
 			},
 			{
 				type: 2,
 				style: BUTTON_STYLES.DANGER,
 				custom_id: `fitgirl_downvote_${game.guid}`,
-				emoji: { name: "👎" },
+				emoji: { name: "\u{1F44E}" },
 			},
 		);
 
@@ -350,10 +343,9 @@ export class DiscordEmbedFormatter implements IDiscordEmbedFormatter {
 		return `${secs}s`;
 	}
 
-	private formatRatings(ratings: {
-		upvotes: number;
-		downvotes: number;
-	}): string {
-		return `👍 ${ratings.upvotes} | 👎 ${ratings.downvotes}`;
+	private formatRating(rating: "upvote" | "downvote" | null): string {
+		if (rating === "upvote") return "\u{1F44D} Upvoted";
+		if (rating === "downvote") return "\u{1F44E} Downvoted";
+		return "No rating";
 	}
 }

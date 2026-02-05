@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Sql } from "postgres";
 import type {
 	BaseConsumerOptions,
 	ILogger,
@@ -135,24 +135,6 @@ export interface GameRecord {
 	rating: "upvote" | "downvote" | null;
 }
 
-export interface RatingRecord {
-	id: number;
-	game_id: number;
-	user_id: string;
-	rating: "upvote" | "downvote";
-	created_at: string;
-	updated_at: string;
-}
-
-export interface SteamCorrectionRecord {
-	id: number;
-	game_id: number;
-	user_id: string;
-	original_steam_url: string | null;
-	corrected_steam_url: string;
-	created_at: string;
-}
-
 // Discord Embed Types
 export interface DiscordEmbed {
 	title?: string;
@@ -224,27 +206,8 @@ export interface IGamesRepository {
 	updateTorrentHash(guid: string, hash: string): Promise<void>;
 	updateDownloadStarted(guid: string): Promise<void>;
 	updateDownloadCompleted(guid: string): Promise<void>;
+	updateRating(guid: string, rating: "upvote" | "downvote"): Promise<void>;
 	deleteAll(): Promise<number>;
-}
-
-export interface IRatingsRepository {
-	upsert(
-		gameId: number,
-		userId: string,
-		rating: "upvote" | "downvote",
-	): Promise<void>;
-	getCountsByGameId(
-		gameId: number,
-	): Promise<{ upvotes: number; downvotes: number }>;
-}
-
-export interface ICorrectionsRepository {
-	create(
-		gameId: number,
-		userId: string,
-		originalUrl: string | null,
-		correctedUrl: string,
-	): Promise<void>;
 }
 
 // Publisher Interfaces
@@ -275,23 +238,16 @@ export interface IDiscordEmbedFormatter {
 	formatProgressUpdate(
 		game: GameRecord,
 		progress: DownloadProgressMessage,
-		ratings: { upvotes: number; downvotes: number },
 	): DiscordPostMessage;
-	formatDownloadComplete(
-		game: GameRecord,
-		ratings: { upvotes: number; downvotes: number },
-	): DiscordPostMessage;
-	formatDownloadStarted(
-		game: GameRecord,
-		ratings: { upvotes: number; downvotes: number },
-	): DiscordPostMessage;
+	formatDownloadComplete(game: GameRecord): DiscordPostMessage;
+	formatDownloadStarted(game: GameRecord): DiscordPostMessage;
 }
 
 // Database Interface
 export interface IDatabaseManager {
 	initialize(): Promise<void>;
-	getDb(): Database;
-	close(): void;
+	getSql(): Sql;
+	close(): Promise<void>;
 }
 
 // Constructor Options
@@ -325,7 +281,6 @@ export interface ReleaseNewServiceOptions {
 
 export interface ButtonInteractionServiceOptions {
 	gamesRepository: IGamesRepository;
-	ratingsRepository: IRatingsRepository;
 	qbittorrentPublisher: IQbittorrentPublisher;
 	discordPublisher: IDiscordPublisher;
 	formatter: IDiscordEmbedFormatter;
@@ -334,7 +289,6 @@ export interface ButtonInteractionServiceOptions {
 
 export interface DownloadProgressServiceOptions {
 	gamesRepository: IGamesRepository;
-	ratingsRepository: IRatingsRepository;
 	discordPublisher: IDiscordPublisher;
 	formatter: IDiscordEmbedFormatter;
 	progressThrottler: IProgressThrottler;
@@ -343,7 +297,6 @@ export interface DownloadProgressServiceOptions {
 
 export interface DownloadCompleteServiceOptions {
 	gamesRepository: IGamesRepository;
-	ratingsRepository: IRatingsRepository;
 	discordPublisher: IDiscordPublisher;
 	formatter: IDiscordEmbedFormatter;
 	logger: ILogger;
@@ -351,7 +304,6 @@ export interface DownloadCompleteServiceOptions {
 
 export interface ModalInteractionServiceOptions {
 	gamesRepository: IGamesRepository;
-	correctionsRepository: ICorrectionsRepository;
 	discordPublisher: IDiscordPublisher;
 	logger: ILogger;
 }
@@ -369,22 +321,12 @@ export interface ProgressThrottlerOptions {
 }
 
 export interface GamesRepositoryOptions {
-	db: Database;
-	logger: ILogger;
-}
-
-export interface RatingsRepositoryOptions {
-	db: Database;
-	logger: ILogger;
-}
-
-export interface CorrectionsRepositoryOptions {
-	db: Database;
+	sql: Sql;
 	logger: ILogger;
 }
 
 export interface DatabaseManagerOptions {
-	path: string;
+	connectionString: string;
 	logger: ILogger;
 }
 

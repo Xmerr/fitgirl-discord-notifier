@@ -1,6 +1,6 @@
 {
 	"name": "fitgirl-discord-notifier",
-	"version": "1.3.0",
+	"version": "2.0.0",
 	"type": "module",
 	"main": "dist/index.js",
 	"scripts": {
@@ -14,7 +14,8 @@
 	},
 	"dependencies": {
 		"@xmer/consumer-shared": "^1.0.1",
-		"ioredis": "^5.4.2"
+		"ioredis": "^5.4.2",
+		"postgres": "^3.4.5"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

@@ -7,12 +7,10 @@ import type {
 	IDownloadProgressService,
 	IGamesRepository,
 	IProgressThrottler,
-	IRatingsRepository,
 } from "../types/index.js";
 
 export class DownloadProgressService implements IDownloadProgressService {
 	private readonly gamesRepository: IGamesRepository;
-	private readonly ratingsRepository: IRatingsRepository;
 	private readonly discordPublisher: IDiscordPublisher;
 	private readonly formatter: IDiscordEmbedFormatter;
 	private readonly progressThrottler: IProgressThrottler;
@@ -20,7 +18,6 @@ export class DownloadProgressService implements IDownloadProgressService {
 
 	constructor(options: DownloadProgressServiceOptions) {
 		this.gamesRepository = options.gamesRepository;
-		this.ratingsRepository = options.ratingsRepository;
 		this.discordPublisher = options.discordPublisher;
 		this.formatter = options.formatter;
 		this.progressThrottler = options.progressThrottler;
@@ -49,13 +46,8 @@ export class DownloadProgressService implements IDownloadProgressService {
 		// Mark throttle
 		await this.progressThrottler.markUpdated(game.guid);
 
-		// Get ratings and format message
-		const ratings = await this.ratingsRepository.getCountsByGameId(game.id);
-		const message = this.formatter.formatProgressUpdate(
-			game,
-			progress,
-			ratings,
-		);
+		// Format message
+		const message = this.formatter.formatProgressUpdate(game, progress);
 
 		// Update Discord
 		await this.discordPublisher.sendPost(message);

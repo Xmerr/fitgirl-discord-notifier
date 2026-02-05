@@ -9,14 +9,12 @@ import type {
 	IDiscordPublisher,
 	IGamesRepository,
 	IQbittorrentPublisher,
-	IRatingsRepository,
 } from "../types/index.js";
 
 type ButtonAction = "download" | "upvote" | "downvote";
 
 export class ButtonInteractionService implements IButtonInteractionService {
 	private readonly gamesRepository: IGamesRepository;
-	private readonly ratingsRepository: IRatingsRepository;
 	private readonly qbittorrentPublisher: IQbittorrentPublisher;
 	private readonly discordPublisher: IDiscordPublisher;
 	private readonly formatter: IDiscordEmbedFormatter;
@@ -24,7 +22,6 @@ export class ButtonInteractionService implements IButtonInteractionService {
 
 	constructor(options: ButtonInteractionServiceOptions) {
 		this.gamesRepository = options.gamesRepository;
-		this.ratingsRepository = options.ratingsRepository;
 		this.qbittorrentPublisher = options.qbittorrentPublisher;
 		this.discordPublisher = options.discordPublisher;
 		this.formatter = options.formatter;
@@ -52,15 +49,10 @@ export class ButtonInteractionService implements IButtonInteractionService {
 				await this.handleDownload(game.guid, message.user_id);
 				break;
 			case "upvote":
-				await this.handleRating(game.id, game.guid, message.user_id, "upvote");
+				await this.handleRating(game.guid, message.user_id, "upvote");
 				break;
 			case "downvote":
-				await this.handleRating(
-					game.id,
-					game.guid,
-					message.user_id,
-					"downvote",
-				);
+				await this.handleRating(game.guid, message.user_id, "downvote");
 				break;
 		}
 	}
@@ -113,13 +105,9 @@ export class ButtonInteractionService implements IButtonInteractionService {
 		await this.gamesRepository.updateDownloadStarted(guid);
 
 		// Update Discord message
-		const ratings = await this.ratingsRepository.getCountsByGameId(game.id);
 		const updatedGame = await this.gamesRepository.findByGuid(guid);
 		if (updatedGame) {
-			const message = this.formatter.formatDownloadStarted(
-				updatedGame,
-				ratings,
-			);
+			const message = this.formatter.formatDownloadStarted(updatedGame);
 			await this.discordPublisher.sendPost(message);
 		}
 
@@ -127,27 +115,24 @@ export class ButtonInteractionService implements IButtonInteractionService {
 	}
 
 	private async handleRating(
-		gameId: number,
 		guid: string,
 		userId: string,
 		rating: "upvote" | "downvote",
 	): Promise<void> {
-		await this.ratingsRepository.upsert(gameId, userId, rating);
+		await this.gamesRepository.updateRating(guid, rating);
 
-		// Get updated counts and update Discord message
-		const ratings = await this.ratingsRepository.getCountsByGameId(gameId);
+		// Get updated game and update Discord message
 		const game = await this.gamesRepository.findByGuid(guid);
 
 		if (game) {
 			let message: DiscordPostMessage;
 			if (game.download_completed_at) {
-				message = this.formatter.formatDownloadComplete(game, ratings);
+				message = this.formatter.formatDownloadComplete(game);
 			} else if (game.download_started_at) {
-				message = this.formatter.formatDownloadStarted(game, ratings);
+				message = this.formatter.formatDownloadStarted(game);
 			} else {
-				// Re-send the original release format with updated ratings
-				// For now, just update with download started format since we don't store full release data
-				message = this.formatter.formatDownloadStarted(game, ratings);
+				// Re-send the download started format since we don't store full release data
+				message = this.formatter.formatDownloadStarted(game);
 			}
 			await this.discordPublisher.sendPost(message);
 		}

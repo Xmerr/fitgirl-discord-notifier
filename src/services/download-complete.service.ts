@@ -6,19 +6,16 @@ import type {
 	IDiscordPublisher,
 	IDownloadCompleteService,
 	IGamesRepository,
-	IRatingsRepository,
 } from "../types/index.js";
 
 export class DownloadCompleteService implements IDownloadCompleteService {
 	private readonly gamesRepository: IGamesRepository;
-	private readonly ratingsRepository: IRatingsRepository;
 	private readonly discordPublisher: IDiscordPublisher;
 	private readonly formatter: IDiscordEmbedFormatter;
 	private readonly logger: ILogger;
 
 	constructor(options: DownloadCompleteServiceOptions) {
 		this.gamesRepository = options.gamesRepository;
-		this.ratingsRepository = options.ratingsRepository;
 		this.discordPublisher = options.discordPublisher;
 		this.formatter = options.formatter;
 		this.logger = options.logger.child({
@@ -39,15 +36,11 @@ export class DownloadCompleteService implements IDownloadCompleteService {
 		// Update database
 		await this.gamesRepository.updateDownloadCompleted(game.guid);
 
-		// Get ratings and format message
-		const ratings = await this.ratingsRepository.getCountsByGameId(game.id);
+		// Get updated game and format message
 		const updatedGame = await this.gamesRepository.findByGuid(game.guid);
 
 		if (updatedGame) {
-			const message = this.formatter.formatDownloadComplete(
-				updatedGame,
-				ratings,
-			);
+			const message = this.formatter.formatDownloadComplete(updatedGame);
 			await this.discordPublisher.sendPost(message);
 		}
 

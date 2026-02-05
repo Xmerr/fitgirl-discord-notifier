@@ -1,6 +1,6 @@
 -- Games table - stores all game releases
 CREATE TABLE IF NOT EXISTS games (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     guid TEXT NOT NULL UNIQUE,
     game_name TEXT NOT NULL,
     title_raw TEXT NOT NULL,
@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS games (
     size_original TEXT NOT NULL,
     size_repack TEXT NOT NULL,
     pub_date TEXT NOT NULL,
-    download_started_at TEXT,
-    download_completed_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    download_started_at TIMESTAMP,
+    download_completed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     -- Steam enrichment data
     steam_header_image TEXT,
     steam_price TEXT,
@@ -39,33 +39,4 @@ CREATE INDEX IF NOT EXISTS idx_games_torrent_hash ON games(torrent_hash);
 CREATE INDEX IF NOT EXISTS idx_games_discord_message_id ON games(discord_message_id);
 
 -- Index for pub_date sorting (games list queries)
-CREATE INDEX IF NOT EXISTS idx_games_pub_date ON games(pub_date DESC);
-
--- Ratings table - one rating per user per game
-CREATE TABLE IF NOT EXISTS ratings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    game_id INTEGER NOT NULL,
-    user_id TEXT NOT NULL,
-    rating TEXT NOT NULL CHECK (rating IN ('upvote', 'downvote')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-    UNIQUE(game_id, user_id)
-);
-
--- Index for rating counts by game
-CREATE INDEX IF NOT EXISTS idx_ratings_game_id ON ratings(game_id);
-
--- Steam corrections table - stores user-submitted URL corrections
-CREATE TABLE IF NOT EXISTS steam_corrections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    game_id INTEGER NOT NULL,
-    user_id TEXT NOT NULL,
-    original_steam_url TEXT,
-    corrected_steam_url TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
-);
-
--- Index for corrections by game
-CREATE INDEX IF NOT EXISTS idx_steam_corrections_game_id ON steam_corrections(game_id);
+CREATE INDEX IF NOT EXISTS idx_games_pub_date ON games(pub_date DESC)

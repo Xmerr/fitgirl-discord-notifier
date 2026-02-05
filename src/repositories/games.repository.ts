@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { Sql } from "postgres";
 import type { ILogger } from "@xmer/consumer-shared";
 import { DatabaseError, DuplicateGameError } from "../errors/index.js";
 import type {
@@ -9,50 +9,45 @@ import type {
 } from "../types/index.js";
 
 export class GamesRepository implements IGamesRepository {
-	private readonly db: Database;
+	private readonly sql: Sql;
 	private readonly logger: ILogger;
 
 	constructor(options: GamesRepositoryOptions) {
-		this.db = options.db;
+		this.sql = options.sql;
 		this.logger = options.logger.child({ component: "GamesRepository" });
 	}
 
-	create(release: FitGirlRelease, channelId: string): Promise<GameRecord> {
-		const sql = `
-			INSERT INTO games (
-				guid, game_name, title_raw, fitgirl_url, steam_app_id, steam_url, steam_name,
-				magnet_link, size_original, size_repack, pub_date, discord_channel_id,
-				steam_header_image, steam_price, steam_categories, steam_review_score,
-				steam_review_desc, steam_total_positive, steam_total_negative
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			RETURNING *
-		`;
-
+	async create(release: FitGirlRelease, channelId: string): Promise<GameRecord> {
 		try {
-			const stmt = this.db.prepare(sql);
-			const result = stmt.get(
-				release.guid,
-				release.game_name,
-				release.title_raw,
-				release.fitgirl_url,
-				release.steam?.app_id ?? null,
-				release.steam?.steam_url ?? null,
-				release.steam?.name ?? null,
-				release.magnet_link ?? null,
-				release.size_original,
-				release.size_repack,
-				release.pub_date,
-				channelId,
-				release.steam?.media?.header_image ?? null,
-				release.steam?.price ?? null,
-				release.steam?.categories
-					? JSON.stringify(release.steam.categories)
-					: null,
-				null, // steam_review_score - not provided in input
-				release.steam?.ratings?.review_score_desc ?? null,
-				release.steam?.ratings?.total_positive ?? null,
-				release.steam?.ratings?.total_negative ?? null,
-			) as GameRecord | null;
+			const [result] = await this.sql<GameRecord[]>`
+				INSERT INTO games (
+					guid, game_name, title_raw, fitgirl_url, steam_app_id, steam_url, steam_name,
+					magnet_link, size_original, size_repack, pub_date, discord_channel_id,
+					steam_header_image, steam_price, steam_categories, steam_review_score,
+					steam_review_desc, steam_total_positive, steam_total_negative
+				) VALUES (
+					${release.guid},
+					${release.game_name},
+					${release.title_raw},
+					${release.fitgirl_url},
+					${release.steam?.app_id ?? null},
+					${release.steam?.steam_url ?? null},
+					${release.steam?.name ?? null},
+					${release.magnet_link ?? null},
+					${release.size_original},
+					${release.size_repack},
+					${release.pub_date},
+					${channelId},
+					${release.steam?.media?.header_image ?? null},
+					${release.steam?.price ?? null},
+					${release.steam?.categories ? JSON.stringify(release.steam.categories) : null},
+					${null},
+					${release.steam?.ratings?.review_score_desc ?? null},
+					${release.steam?.ratings?.total_positive ?? null},
+					${release.steam?.ratings?.total_negative ?? null}
+				)
+				RETURNING *
+			`;
 
 			if (!result) {
 				throw new DatabaseError("Insert returned no result", "create", {
@@ -61,11 +56,11 @@ export class GamesRepository implements IGamesRepository {
 			}
 
 			this.logger.debug("Game created", { guid: release.guid, id: result.id });
-			return Promise.resolve(result);
+			return result;
 		} catch (error) {
 			if (
 				error instanceof Error &&
-				error.message.includes("UNIQUE constraint failed")
+				error.message.includes("duplicate key value")
 			) {
 				throw new DuplicateGameError(release.guid);
 			}
@@ -73,67 +68,73 @@ export class GamesRepository implements IGamesRepository {
 		}
 	}
 
-	findByGuid(guid: string): Promise<GameRecord | null> {
-		const sql = "SELECT * FROM games WHERE guid = ?";
-		const stmt = this.db.prepare(sql);
-		const result = stmt.get(guid) as GameRecord | null;
-		return Promise.resolve(result);
+	async findByGuid(guid: string): Promise<GameRecord | null> {
+		const [result] = await this.sql<GameRecord[]>`
+			SELECT * FROM games WHERE guid = ${guid}
+		`;
+		return result ?? null;
 	}
 
-	findByTorrentHash(hash: string): Promise<GameRecord | null> {
-		const sql = "SELECT * FROM games WHERE torrent_hash = ?";
-		const stmt = this.db.prepare(sql);
-		const result = stmt.get(hash) as GameRecord | null;
-		return Promise.resolve(result);
+	async findByTorrentHash(hash: string): Promise<GameRecord | null> {
+		const [result] = await this.sql<GameRecord[]>`
+			SELECT * FROM games WHERE torrent_hash = ${hash}
+		`;
+		return result ?? null;
 	}
 
-	updateDiscordMessageId(guid: string, messageId: string): Promise<void> {
-		const sql =
-			"UPDATE games SET discord_message_id = ?, updated_at = datetime('now') WHERE guid = ?";
-		const stmt = this.db.prepare(sql);
-		stmt.run(messageId, guid);
+	async updateDiscordMessageId(guid: string, messageId: string): Promise<void> {
+		await this.sql`
+			UPDATE games
+			SET discord_message_id = ${messageId}, updated_at = NOW()
+			WHERE guid = ${guid}
+		`;
 		this.logger.debug("Discord message ID updated", { guid, messageId });
-		return Promise.resolve();
 	}
 
-	updateTorrentHash(guid: string, hash: string): Promise<void> {
-		const sql =
-			"UPDATE games SET torrent_hash = ?, updated_at = datetime('now') WHERE guid = ?";
-		const stmt = this.db.prepare(sql);
-		stmt.run(hash, guid);
+	async updateTorrentHash(guid: string, hash: string): Promise<void> {
+		await this.sql`
+			UPDATE games
+			SET torrent_hash = ${hash}, updated_at = NOW()
+			WHERE guid = ${guid}
+		`;
 		this.logger.debug("Torrent hash updated", { guid, hash });
-		return Promise.resolve();
 	}
 
-	updateDownloadStarted(guid: string): Promise<void> {
-		const sql =
-			"UPDATE games SET download_started_at = datetime('now'), updated_at = datetime('now') WHERE guid = ?";
-		const stmt = this.db.prepare(sql);
-		stmt.run(guid);
+	async updateDownloadStarted(guid: string): Promise<void> {
+		await this.sql`
+			UPDATE games
+			SET download_started_at = NOW(), updated_at = NOW()
+			WHERE guid = ${guid}
+		`;
 		this.logger.debug("Download started", { guid });
-		return Promise.resolve();
 	}
 
-	updateDownloadCompleted(guid: string): Promise<void> {
-		const sql =
-			"UPDATE games SET download_completed_at = datetime('now'), updated_at = datetime('now') WHERE guid = ?";
-		const stmt = this.db.prepare(sql);
-		stmt.run(guid);
+	async updateDownloadCompleted(guid: string): Promise<void> {
+		await this.sql`
+			UPDATE games
+			SET download_completed_at = NOW(), updated_at = NOW()
+			WHERE guid = ${guid}
+		`;
 		this.logger.debug("Download completed", { guid });
-		return Promise.resolve();
 	}
 
-	deleteAll(): Promise<number> {
-		const countSql = "SELECT COUNT(*) as count FROM games";
-		const countStmt = this.db.prepare(countSql);
-		const countResult = countStmt.get() as { count: number };
-		const count = countResult.count;
+	async updateRating(guid: string, rating: "upvote" | "downvote"): Promise<void> {
+		await this.sql`
+			UPDATE games
+			SET rating = ${rating}, updated_at = NOW()
+			WHERE guid = ${guid}
+		`;
+		this.logger.debug("Rating updated", { guid, rating });
+	}
 
-		const deleteSql = "DELETE FROM games";
-		const deleteStmt = this.db.prepare(deleteSql);
-		deleteStmt.run();
+	async deleteAll(): Promise<number> {
+		const [{ count }] = await this.sql<[{ count: number }]>`
+			SELECT COUNT(*) as count FROM games
+		`;
+
+		await this.sql`DELETE FROM games`;
 
 		this.logger.info("All games deleted", { deletedCount: count });
-		return Promise.resolve(count);
+		return Number(count);
 	}
 }
