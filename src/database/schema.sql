@@ -39,4 +39,4 @@ CREATE INDEX IF NOT EXISTS idx_games_torrent_hash ON games(torrent_hash);
 CREATE INDEX IF NOT EXISTS idx_games_discord_message_id ON games(discord_message_id);
 
 -- Index for pub_date sorting (games list queries)
-CREATE INDEX IF NOT EXISTS idx_games_pub_date ON games(pub_date DESC)
+CREATE INDEX IF NOT EXISTS idx_games_pub_date ON games(pub_date DESC);

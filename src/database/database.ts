@@ -36,11 +36,17 @@ export class DatabaseManager implements IDatabaseManager {
 			const schemaPath = join(__dirname, "schema.sql");
 			const schema = readFileSync(schemaPath, "utf-8");
 
-			// Split schema into statements and execute each
+			// Split schema into statements, strip comment-only lines, and execute each
 			const statements = schema
 				.split(";")
-				.map((s) => s.trim())
-				.filter((s) => s.length > 0 && !s.startsWith("--"));
+				.map((s) =>
+					s
+						.split("\n")
+						.filter((line) => !line.trim().startsWith("--"))
+						.join("\n")
+						.trim(),
+				)
+				.filter((s) => s.length > 0);
 
 			for (const statement of statements) {
 				await this.sql.unsafe(statement);
