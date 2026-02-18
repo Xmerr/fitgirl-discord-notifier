@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS games (
     steam_total_positive INTEGER,
     steam_total_negative INTEGER,
     -- Single rating per game
-    rating TEXT CHECK (rating IN ('upvote', 'downvote'))
+    rating TEXT CHECK (rating IN ('upvote', 'downvote')),
+    -- Steam refresh tracking
+    steam_refreshed_at TIMESTAMPTZ
 );
 
 -- Index for torrent hash lookups (download progress/complete)

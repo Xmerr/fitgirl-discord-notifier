@@ -11,6 +11,7 @@ import { DownloadProgressConsumer } from "./consumers/download-progress.consumer
 import { ModalInteractionConsumer } from "./consumers/modal-interaction.consumer.js";
 import { ReleaseNewConsumer } from "./consumers/release-new.consumer.js";
 import { ResetConsumer } from "./consumers/reset.consumer.js";
+import { SteamEnrichedConsumer } from "./consumers/steam-enriched.consumer.js";
 import { DatabaseManager } from "./database/database.js";
 import { DiscordEmbedFormatter } from "./formatters/discord-embed.formatter.js";
 import { DiscordPublisher } from "./publishers/discord.publisher.js";
@@ -22,6 +23,7 @@ import { DownloadProgressService } from "./services/download-progress.service.js
 import { ModalInteractionService } from "./services/modal-interaction.service.js";
 import { ReleaseNewService } from "./services/release-new.service.js";
 import { ResetService } from "./services/reset.service.js";
+import { SteamEnrichedService } from "./services/steam-enriched.service.js";
 import { ProgressThrottler } from "./state/progress-throttler.js";
 
 async function main(): Promise<void> {
@@ -133,6 +135,11 @@ async function main(): Promise<void> {
 		logger,
 	});
 
+	const steamEnrichedService = new SteamEnrichedService({
+		gamesRepository,
+		logger,
+	});
+
 	// Initialize DLQ handlers
 	const releaseNewDlqHandler = new DlqHandler({
 		channel,
@@ -178,6 +185,14 @@ async function main(): Promise<void> {
 		channel,
 		exchange: "fitgirl",
 		queue: "fitgirl.reset.discord-notifier",
+		serviceName: "fitgirl-discord-notifier",
+		logger,
+	});
+
+	const steamEnrichedDlqHandler = new DlqHandler({
+		channel,
+		exchange: "fitgirl",
+		queue: "fitgirl.steam.enriched.discord-notifier",
 		serviceName: "fitgirl-discord-notifier",
 		logger,
 	});
@@ -243,6 +258,16 @@ async function main(): Promise<void> {
 		resetService,
 	});
 
+	const steamEnrichedConsumer = new SteamEnrichedConsumer({
+		channel,
+		exchange: "fitgirl",
+		queue: "fitgirl.steam.enriched.discord-notifier",
+		routingKey: "steam.enriched",
+		dlqHandler: steamEnrichedDlqHandler,
+		logger,
+		steamEnrichedService,
+	});
+
 	// Start consumers
 	await releaseNewConsumer.start();
 	await buttonInteractionConsumer.start();
@@ -250,6 +275,7 @@ async function main(): Promise<void> {
 	await downloadProgressConsumer.start();
 	await downloadCompleteConsumer.start();
 	await resetConsumer.start();
+	await steamEnrichedConsumer.start();
 
 	logger.info("fitgirl-discord-notifier is running");
 
@@ -263,6 +289,7 @@ async function main(): Promise<void> {
 		await downloadProgressConsumer.stop();
 		await downloadCompleteConsumer.stop();
 		await resetConsumer.stop();
+		await steamEnrichedConsumer.stop();
 
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 

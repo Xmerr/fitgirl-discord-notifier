@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { ILogger } from "@xmer/consumer-shared";
 import { DuplicateGameError } from "../errors/index.js";
-import type { FitGirlRelease, GameRecord } from "../types/index.js";
+import type { FitGirlRelease, GameRecord, SteamData } from "../types/index.js";
 import { GamesRepository } from "./games.repository.js";
 
 const mockLogger: ILogger = {
@@ -77,6 +77,7 @@ const createMockGameRecord = (
 	steam_total_positive: 1000,
 	steam_total_negative: 100,
 	rating: null,
+	steam_refreshed_at: null,
 	...overrides,
 });
 
@@ -283,6 +284,46 @@ describe("GamesRepository", () => {
 
 			// Act
 			await repository.updateDownloadCompleted("test-guid-123");
+
+			// Assert
+			expect(mockSql).toHaveBeenCalled();
+		});
+	});
+
+	describe("updateSteamData", () => {
+		const sampleSteamData: SteamData = {
+			app_id: 12345,
+			name: "Test Game",
+			steam_url: "https://store.steampowered.com/app/12345",
+			price: "$29.99",
+			ratings: {
+				total_positive: 1000,
+				total_negative: 100,
+				review_score_desc: "Very Positive",
+			},
+			categories: ["Single-player", "Multiplayer"],
+			media: {
+				header_image: "https://cdn.steam.com/header.jpg",
+			},
+		};
+
+		it("should update all steam columns when steam data is provided", async () => {
+			// Arrange
+			mockSql.mockResolvedValueOnce([]);
+
+			// Act
+			await repository.updateSteamData(1, sampleSteamData);
+
+			// Assert
+			expect(mockSql).toHaveBeenCalled();
+		});
+
+		it("should only update steam_refreshed_at when steam is null", async () => {
+			// Arrange
+			mockSql.mockResolvedValueOnce([]);
+
+			// Act
+			await repository.updateSteamData(1, null);
 
 			// Assert
 			expect(mockSql).toHaveBeenCalled();

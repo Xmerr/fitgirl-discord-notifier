@@ -6,6 +6,7 @@ import type {
 	GameRecord,
 	GamesRepositoryOptions,
 	IGamesRepository,
+	SteamData,
 } from "../types/index.js";
 
 export class GamesRepository implements IGamesRepository {
@@ -131,6 +132,34 @@ export class GamesRepository implements IGamesRepository {
 			WHERE guid = ${guid}
 		`;
 		this.logger.debug("Rating updated", { guid, rating });
+	}
+
+	async updateSteamData(id: number, steam: SteamData | null): Promise<void> {
+		if (steam) {
+			await this.sql`
+				UPDATE games
+				SET
+					steam_app_id = ${steam.app_id},
+					steam_url = ${steam.steam_url},
+					steam_name = ${steam.name},
+					steam_header_image = ${steam.media?.header_image ?? null},
+					steam_price = ${steam.price ?? null},
+					steam_categories = ${steam.categories ? JSON.stringify(steam.categories) : null},
+					steam_review_desc = ${steam.ratings?.review_score_desc ?? null},
+					steam_total_positive = ${steam.ratings?.total_positive ?? null},
+					steam_total_negative = ${steam.ratings?.total_negative ?? null},
+					steam_refreshed_at = NOW(),
+					updated_at = NOW()
+				WHERE id = ${id}
+			`;
+		} else {
+			await this.sql`
+				UPDATE games
+				SET steam_refreshed_at = NOW(), updated_at = NOW()
+				WHERE id = ${id}
+			`;
+		}
+		this.logger.debug("Steam data updated", { id, steamFound: steam !== null });
 	}
 
 	async deleteAll(): Promise<number> {

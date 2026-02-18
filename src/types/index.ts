@@ -133,6 +133,8 @@ export interface GameRecord {
 	steam_total_negative: number | null;
 	// Single rating per game
 	rating: "upvote" | "downvote" | null;
+	// Steam refresh tracking
+	steam_refreshed_at: string | null;
 }
 
 // Discord Embed Types
@@ -207,6 +209,7 @@ export interface IGamesRepository {
 	updateDownloadStarted(guid: string): Promise<void>;
 	updateDownloadCompleted(guid: string): Promise<void>;
 	updateRating(guid: string, rating: "upvote" | "downvote"): Promise<void>;
+	updateSteamData(id: number, steam: SteamData | null): Promise<void>;
 	deleteAll(): Promise<number>;
 }
 
@@ -353,4 +356,24 @@ export interface ResetServiceOptions {
 
 export interface ResetConsumerOptions extends BaseConsumerOptions {
 	resetService: IResetService;
+}
+
+// Steam Enriched Types
+export interface SteamEnrichedMessage {
+	gameId: number;
+	steam: SteamData | null;
+	timestamp: string;
+}
+
+export interface ISteamEnrichedService {
+	handleEnriched(message: SteamEnrichedMessage): Promise<void>;
+}
+
+export interface SteamEnrichedServiceOptions {
+	gamesRepository: IGamesRepository;
+	logger: ILogger;
+}
+
+export interface SteamEnrichedConsumerOptions extends BaseConsumerOptions {
+	steamEnrichedService: ISteamEnrichedService;
 }
